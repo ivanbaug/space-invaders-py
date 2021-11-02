@@ -1,25 +1,30 @@
 from turtle import Turtle
 
-BALL_DIA = 0.8
+BULLET_SIZE = 0.8
 
 
-class Ball(Turtle):
+class Bullet(Turtle):
     def __init__(self):
         super().__init__()
-        self.shape("circle")
-        self.shapesize(stretch_len=BALL_DIA, stretch_wid=BALL_DIA)
+        # self.shape("circle")
+        self.shapesize(stretch_len=BULLET_SIZE, stretch_wid=BULLET_SIZE)
         self.penup()
         self.color("orange")
         self.speed("fastest")
         self.x_move = 10
         self.y_move = 10
-        self.move_speed = 0.05
+        self.move_speed = 0.02
+        self.is_fired = False
+        # Point north
+        self.left(90)
         # for collision just a box
-        self.w = BALL_DIA * 20  # px
-        self.h = BALL_DIA * 20  # px
+        self.w = BULLET_SIZE * 20  # px
+        self.h = BULLET_SIZE * 20  # px
 
     def move(self):
-        new_x = self.xcor() + self.x_move
+        # new_x = self.xcor() + self.x_move
+        # new_y = self.ycor() + self.y_move
+        new_x = self.xcor()
         new_y = self.ycor() + self.y_move
         self.goto(new_x, new_y)
 
@@ -36,8 +41,14 @@ class Ball(Turtle):
         self.goto(0, 0)
         # self.bounce_x()
 
-    def follow_paddle(self, coord):
+    def follow_ship(self, coord):
         self.goto(coord)
 
     def set_speed(self, speed):
         self.move_speed = speed
+
+    def fire(self):
+        self.is_fired = True
+
+    def reload(self):
+        self.is_fired = False

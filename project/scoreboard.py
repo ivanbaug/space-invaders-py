@@ -20,7 +20,7 @@ class Message(Turtle):
         self.speed("fastest")
         self.goto(self.origin)
 
-    def display(self, msg):
+    def display(self, msg=""):
         self.clear()
         self.goto(self.origin)
         self.write(
@@ -44,14 +44,14 @@ class Scoreboard(Turtle):
         self.start_level = False
         self.level = 1
         self.lives = 3
-        self.speed_level = [0.05, 0.04, 0.03, 0.02, 0.01]
+        self.speed_level = [0.02, 0.02, 0.02, 0.02, 0.01]
         self.update_score("Press space to begin")
 
     def update_score(self, msg=""):
         self.clear()
         self.goto(ORIGIN)
         self.write(
-            f"Score:{self.score_plyr}\t\tLives:{self.lives}",
+            f"Score:{self.score_plyr}        Lives:{self.lives}",
             True,
             align=ALIGNMENT,
             font=FONT,

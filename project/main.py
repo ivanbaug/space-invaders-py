@@ -1,10 +1,15 @@
 from turtle import Screen, Turtle
-from paddle import Paddle
-from ball import Ball
+from vessels import Ship, SHIP_WIDTH, SHIP_HEIGHT, B_OFFSET
+from bullet import Bullet
 
 from scoreboard import Scoreboard, FONT, Message
 from alien_manager import AlienManager
 import time
+
+# Screen  size
+SCREEN_WIDTH = 700
+SCREEN_HEIGHT = 900
+TOP_BOUNDARY = 340
 
 
 def draw_border():
@@ -46,14 +51,9 @@ def det_collision(obj1, obj2):
     return False, False
 
 
-# Screen  size
-S_WIDTH = 700
-S_HEIGHT = 900
-
-
 # Setting the screen up
 screen = Screen()
-screen.setup(width=S_WIDTH, height=S_HEIGHT)
+screen.setup(width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
 screen.bgcolor("black")
 screen.title("Ivan's Space Invaders Game")
 # BG Source https://unsplash.com/@fabiolik
@@ -64,33 +64,35 @@ screen.tracer(0)  # update screen on command
 
 # A turtle for information messages
 info_msg = Message(origin=(0, -250))
-info_msg.display("hi dude")
+info_msg.display("")
 title = Message(origin=(0, 390), font=("Consolas", 40, "bold"))
 title.display("SPACE INVADERS")
 # Scoreboard
 scoreb = Scoreboard()
+
 # Boundary
 draw_border()
 
 
-# Paddle math for pos x:
+# Position of the ship math for pos x:
 # pos x = half the height in negative coordinates +
-# half the height of the paddle assuming a total of 20px (default turtle size) +
-# float 20 pixels so you can see the ball fall
+# half the height of the ship assuming a total of 20px (default turtle size) +
+# float 50 pixels
+border_offset = 60
+ship_pos_x = (-SCREEN_HEIGHT / 2) + SHIP_HEIGHT / 2 + border_offset
+ship = Ship((0, ship_pos_x), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
-paddle_pos_x = (-S_HEIGHT / 2) + 10 + 70
-pd = Paddle((0, paddle_pos_x), (S_WIDTH, S_HEIGHT))
-
-ball = Ball()
-
-
-bm = AlienManager((S_WIDTH, S_HEIGHT))
-bm.create_bricks()
+bullet = Bullet()
 
 
-screen.onkeypress(key="Left", fun=pd.move_left)
-screen.onkeypress(key="Right", fun=pd.move_right)
-screen.onkeypress(key="space", fun=scoreb.begin_level)
+am = AlienManager((SCREEN_WIDTH, SCREEN_HEIGHT))
+am.create_aliens()
+
+
+screen.onkeypress(key="Left", fun=ship.move_left)
+screen.onkeypress(key="Right", fun=ship.move_right)
+screen.onkeypress(key="p", fun=scoreb.begin_level)
+screen.onkeypress(key="space", fun=None)
 
 game_is_on = True
 
@@ -100,17 +102,26 @@ while game_is_on:
     screen.update()
 
     if not scoreb.start_level:
-        x, y = pd.pos()
-        ball.follow_paddle((x, y + pd.h))
-        ball.set_speed(scoreb.level_speed())
+        bullet.reload()
+        screen.onkeypress(key="space", fun=None)
+        info_msg.display("Press 'p' to start")
+        x, y = ship.pos()
+        bullet.follow_ship((x, y + B_OFFSET))
+        bullet.set_speed(scoreb.level_speed())
+    if scoreb.start_level:
+        screen.onkeypress(key="space", fun=bullet.fire)
+        info_msg.display("")
 
     while scoreb.start_level:
-
-        ball.move()
+        if bullet.is_fired:
+            bullet.move()
+        else:
+            x, y = ship.pos()
+            bullet.follow_ship((x, y + B_OFFSET))
         screen.update()
-        time.sleep(ball.move_speed)
+        time.sleep(bullet.move_speed)
 
-        if not bm.all_bricks:
+        if not am.all_invaders:
             if scoreb.level == 5:
 
                 scoreb.game_win()
@@ -118,39 +129,42 @@ while game_is_on:
                 break
 
             scoreb.level_completed()
-            x, y = pd.pos()
-            ball.follow_paddle((x, y + pd.h))
-            bm.create_bricks()
+            x, y = ship.pos()
+            bullet.follow_ship((x, y + B_OFFSET))
+            am.create_aliens()
 
         # detect collision with wall
 
-        if ball.ycor() > S_HEIGHT / 2 - 20:
-            ball.bounce_y()
+        if bullet.ycor() > TOP_BOUNDARY:
+            bullet.reload()
 
-        if ball.xcor() > (S_WIDTH / 2 - 16 - 10) or ball.xcor() < -(S_WIDTH / 2 - 16):
-            ball.bounce_x()
+        if bullet.xcor() > (SCREEN_WIDTH / 2 - 16 - 10) or bullet.xcor() < -(
+            SCREEN_WIDTH / 2 - 16
+        ):
+            bullet.bounce_x()
 
         # collision with bricks
-        for i, brick in enumerate(bm.all_bricks):
-            collides, c_x = det_collision(brick, ball)
+        for i, brick in enumerate(am.all_invaders):
+            collides, c_x = det_collision(brick, bullet)
             if collides:
                 if c_x:
-                    ball.bounce_x()
+                    bullet.bounce_x()
                 else:
-                    ball.bounce_y()
-                bm.remove_brick(i)
+
+                    bullet.reload()
+                am.remove_alien(i)
                 scoreb.point_for_plyer()
 
         #  Paddle Collision detection
-        collides, c_x = det_collision(pd, ball)
-        if collides:
-            if c_x:
-                ball.bounce_x()
-            else:
-                ball.bounce_y()
+        # collides, c_x = det_collision(ship, bullet)
+        # if collides:
+        #     if c_x:
+        #         bullet.bounce_x()
+        #     else:
+        #         bullet.bounce_y()
 
         # detect lost ball
-        if ball.ycor() < -S_HEIGHT / 2:
+        if bullet.ycor() < -SCREEN_HEIGHT / 2:
             scoreb.lost_life()
             if scoreb.lives == 0:
                 scoreb.game_over()
