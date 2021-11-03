@@ -10,6 +10,7 @@ import time
 SCREEN_WIDTH = 700
 SCREEN_HEIGHT = 900
 TOP_BOUNDARY = 340
+BOTTOM_BOUNDARY = -380
 
 
 def draw_border():
@@ -38,17 +39,10 @@ def det_collision(obj1, obj2):
     y_max_dist = (obj1.h + obj2.h) / 2
     y_dist = abs(obj1.ycor() - obj2.ycor())
 
-    ratio_x = x_dist / x_max_dist
-    ratio_y = y_dist / y_max_dist
-
     if x_dist <= x_max_dist and y_dist <= y_max_dist:
-        if ratio_x > ratio_y:
-            # Bounce on x axis
-            return True, True
-        else:
-            # Bounce on y axis
-            return True, False
-    return False, False
+        return True
+
+    return False
 
 
 # Setting the screen up
@@ -94,79 +88,87 @@ screen.onkeypress(key="Right", fun=ship.move_right)
 screen.onkeypress(key="p", fun=scoreb.begin_level)
 screen.onkeypress(key="space", fun=None)
 
+additional_msg = ""
 game_is_on = True
-
+refresh_speed = 20 / 1000
 
 while game_is_on:
 
     screen.update()
-
+    # Wait screen
     if not scoreb.start_level:
-        bullet.reload()
         screen.onkeypress(key="space", fun=None)
-        info_msg.display("Press 'p' to start")
+        if scoreb.level > 1:
+            info_msg.display(f"{additional_msg}\nPress 'p' to start")
+        else:
+            info_msg.display(
+                f"{additional_msg}\nPress 'p' to start\nTo shoot press 'space'"
+            )
         x, y = ship.pos()
+        bullet.reload()
         bullet.follow_ship((x, y + B_OFFSET))
         bullet.set_speed(scoreb.level_speed())
     if scoreb.start_level:
         screen.onkeypress(key="space", fun=bullet.fire)
         info_msg.display("")
 
+    # In game
     while scoreb.start_level:
         if bullet.is_fired:
             bullet.move()
+            screen.onkeypress(key="space", fun=None)
         else:
+            screen.onkeypress(key="space", fun=bullet.fire)
             x, y = ship.pos()
             bullet.follow_ship((x, y + B_OFFSET))
+
+        # Refresh view
+        am.displace_aliens()
         screen.update()
-        time.sleep(bullet.move_speed)
+        time.sleep(refresh_speed)
 
         if not am.all_invaders:
-            if scoreb.level == 5:
-
+            # End game if player passes all levels
+            if scoreb.level == 3:
+                info_msg.display("🚀🚀 You win! 🚀🚀")
                 scoreb.game_win()
                 game_is_on = False
                 break
-
+            additional_msg = "Level completed!👍"
+            refresh_speed *= 0.5
             scoreb.level_completed()
+
             x, y = ship.pos()
             bullet.follow_ship((x, y + B_OFFSET))
             am.create_aliens()
 
         # detect collision with wall
-
         if bullet.ycor() > TOP_BOUNDARY:
             bullet.reload()
 
-        if bullet.xcor() > (SCREEN_WIDTH / 2 - 16 - 10) or bullet.xcor() < -(
-            SCREEN_WIDTH / 2 - 16
-        ):
-            bullet.bounce_x()
-
-        # collision with bricks
-        for i, brick in enumerate(am.all_invaders):
-            collides, c_x = det_collision(brick, bullet)
+        for i, alien in enumerate(am.all_invaders):
+            # bullet collision with aliens
+            collides = det_collision(alien, bullet)
             if collides:
-                if c_x:
-                    bullet.bounce_x()
-                else:
-
-                    bullet.reload()
+                bullet.reload()
                 am.remove_alien(i)
                 scoreb.point_for_plyer()
 
-        #  Paddle Collision detection
-        # collides, c_x = det_collision(ship, bullet)
-        # if collides:
-        #     if c_x:
-        #         bullet.bounce_x()
-        #     else:
-        #         bullet.bounce_y()
+            # alien collision with ship
+            collides = det_collision(alien, ship)
+            if collides:
+                additional_msg = "You lost a ship"
+                scoreb.lost_life()
+                am.reset_al_positions()
 
-        # detect lost ball
-        if bullet.ycor() < -SCREEN_HEIGHT / 2:
-            scoreb.lost_life()
+            # alien lands planet
+            if alien.ycor() < BOTTOM_BOUNDARY:
+                additional_msg = "Aliens landed your planet\nYou lost a ship"
+                scoreb.lost_life()
+                am.reset_al_positions()
+
             if scoreb.lives == 0:
+                info_msg.display("👾 Game over 👾")
                 scoreb.game_over()
                 game_is_on = False
                 break

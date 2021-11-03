@@ -51,7 +51,7 @@ class Scoreboard(Turtle):
         self.clear()
         self.goto(ORIGIN)
         self.write(
-            f"Score:{self.score_plyr}        Lives:{self.lives}",
+            f"Score:{self.score_plyr}   Level:{self.level} Ships:{self.lives}",
             True,
             align=ALIGNMENT,
             font=FONT,
@@ -67,15 +67,15 @@ class Scoreboard(Turtle):
 
     def level_completed(self):
         self.level += 1
-        self.update_score("Press space to begin")
+        self.update_score()
         self.start_level = False
 
     def game_win(self):
-        self.update_score("Congrats, you win!")
+        self.update_score()
         self.start_level = False
 
     def game_over(self):
-        self.update_score("Game over")
+        self.update_score()
         self.start_level = False
 
     def level_speed(self):
@@ -83,5 +83,5 @@ class Scoreboard(Turtle):
 
     def lost_life(self):
         self.lives -= 1
-        self.update_score("Press space to begin")
+        self.update_score()
         self.start_level = False
